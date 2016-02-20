@@ -10,7 +10,7 @@ ex1 = 'sin(2.2*a - 3.3*b) / sqrt(4.4*a + 5.5*b)'
 times = 100
 
 s = 2
-print('no\tsize\tpython\tcython\tnumpy\tnumexpr\tgain1\tgain2\tgain3')
+print('No\tSize\tPython\tCython\tNumPy\tNumExpr\tGain1\tGain2\tGain3')
 for i in range(20):
     a = np.arange(1, s, dtype=np.float64)
     b = np.arange(1, s, dtype=np.float64)
