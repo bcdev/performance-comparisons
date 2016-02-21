@@ -1,3 +1,5 @@
+package com.bc.perfcomp.util;
+
 /**
  * @author Norman Fomferra
  */

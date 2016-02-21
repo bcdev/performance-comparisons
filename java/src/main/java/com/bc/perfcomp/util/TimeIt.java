@@ -1,7 +1,4 @@
-import java.util.Locale;
-
-import static java.lang.Math.sin;
-import static java.lang.Math.sqrt;
+package com.bc.perfcomp.util;
 
 /**
  * @author Norman Fomferra
