@@ -1,9 +1,6 @@
 import timeit
+
 import numpy as np
-import numexpr as ne
-import python_impl as pyimpl
-import cython_impl as cyimpl
-from numpy import sin, sqrt
 
 MAIN = 'from __main__ import np, ne, pyimpl, cyimpl, sin, sqrt, a, b'
 ex1 = 'sin(2.2*a - 3.3*b) / sqrt(4.4*a + 5.5*b)'
