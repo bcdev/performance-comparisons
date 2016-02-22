@@ -1,49 +1,57 @@
 package com.bc.perfcomp.ex2;
 
 /**
+ * Performs raster resizing which may imply interpolation while upsampling or aggregation while downsampling.
+ *
  * @author Norman Fomferra
  */
 public class Resizer {
 
-    public static double[] resize(int w, int h, double[] data, int wNew, int hNew) {
-        double sx = w / (double) wNew;
-        double sy = h / (double) hNew;
+    public final double EPS = 1e-10;
 
-        if (sx > 1 && sy > 1) {
-            Raster aggregated = aggregate(new Raster(w, h, data), wNew, hNew);
-            return aggregated.data;
-        } else if (sx > 1) {
-            Raster aggregated = aggregate(new Raster(w, h, data), wNew, h);
-            if (sy < 1) {
-                Raster interpolated = interpolate(aggregated, wNew, hNew);
-                return interpolated.data;
+    public static double[] resize(int w, int h, double[] data, int wNew, int hNew) {
+        if (wNew < w && hNew < h) {
+            Raster downsampled = downsample(new Raster(w, h, data), wNew, hNew);
+            return downsampled.data;
+        } else if (wNew < w) {
+            Raster downsampled = downsample(new Raster(w, h, data), wNew, h);
+            if (hNew > h) {
+                Raster upsampled = upsample(downsampled, wNew, hNew);
+                return upsampled.data;
             } else {
-                return aggregated.data;
+                return downsampled.data;
             }
-        } else if (sy > 1) {
-            Raster aggregated = aggregate(new Raster(w, h, data), w, hNew);
-            if (sx < 1) {
-                Raster interpolated = interpolate(aggregated, wNew, hNew);
-                return interpolated.data;
+        } else if (hNew < h) {
+            Raster downsampled = downsample(new Raster(w, h, data), w, hNew);
+            if (wNew > w) {
+                Raster upsampled = upsample(downsampled, wNew, hNew);
+                return upsampled.data;
             } else {
-                return aggregated.data;
+                return downsampled.data;
             }
-        } else if (sx < 1 || sy < 1) {
-            Raster interpolated = interpolate(new Raster(w, h, data), wNew, hNew);
-            return interpolated.data;
+        } else if (wNew > w || hNew > h) {
+            Raster upsampled = upsample(new Raster(w, h, data), wNew, hNew);
+            return upsampled.data;
         }
         return data.clone();
     }
 
-
-    static Raster interpolate(Raster raster, int dstW, int dstH) {
+    /**
+     * Performs a linear interpolation.
+     *
+     * @param raster Source raster
+     * @param dstW   Target raster width
+     * @param dstH   Target raster height
+     * @return Upsampled (interpolated) target raster.
+     */
+    static Raster upsample(Raster raster, int dstW, int dstH) {
         int srcW = raster.w;
         int srcH = raster.h;
         if (srcW == dstW && srcH == dstH) {
             return raster;
         }
         if (dstW < srcW || dstH < srcH) {
-            throw new IllegalArgumentException("Invalid destination size");
+            throw new IllegalArgumentException("Invalid target size");
         }
         double sx = (srcW - 1.0) / (dstW > 1 ? (dstW - 1.0) : 1.0);
         double sy = (srcH - 1.0) / (dstH > 1 ? (dstH - 1.0) : 1.0);
@@ -77,14 +85,22 @@ public class Resizer {
         return new Raster(dstW, dstH, interpolated, gapCount);
     }
 
-    static Raster aggregate(Raster raster, int dstW, int dstH) {
+    /**
+     * Performs an area-weighed average aggregation.
+     *
+     * @param raster Source raster
+     * @param dstW   Target raster width
+     * @param dstH   Target raster height
+     * @return Downsampled (aggregated) target raster.
+     */
+    static Raster downsample(Raster raster, int dstW, int dstH) {
         int srcW = raster.w;
         int srcH = raster.h;
         if (srcW == dstW && srcH == dstH) {
             return raster;
         }
         if (dstW > srcW || dstH > srcH) {
-            throw new IllegalArgumentException("Invalid destination size");
+            throw new IllegalArgumentException("Invalid target size");
         }
         double sx = srcW / (double) dstW;
         double sy = srcH / (double) dstH;
@@ -97,8 +113,8 @@ public class Resizer {
             int srcY1 = (int) srcYF1;
             double wy0 = 1.0 - (srcYF0 - srcY0);
             double wy1 = srcYF1 - srcY1;
-            if (wy1 == 0) {
-                wy1 = 1;
+            if (wy1 < EPS) {
+                wy1 = 1.0;
                 if (srcY1 > srcY0) {
                     srcY1--;
                 }
@@ -110,14 +126,14 @@ public class Resizer {
                 int srcX1 = (int) srcXF1;
                 double wx0 = 1.0 - (srcXF0 - srcX0);
                 double wx1 = srcXF1 - srcX1;
-                if (wx1 == 0) {
-                    wx1 = 1;
+                if (wx1 < EPS) {
+                    wx1 = 1.0;
                     if (srcX1 > srcX0) {
                         srcX1--;
                     }
                 }
-                double vSum = 0;
-                double wSum = 0;
+                double vSum = 0.0;
+                double wSum = 0.0;
                 for (int srcY = srcY0; srcY <= srcY1; srcY++) {
                     double wy = srcY == srcY0 ? wy0 : srcY == srcY1 ? wy1 : 1;
                     for (int srcX = srcX0; srcX <= srcX1; srcX++) {

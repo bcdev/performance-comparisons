@@ -5,7 +5,13 @@ package com.bc.perfcomp.ex2;
  */
 public class GapFiller {
 
-    public static double[] fillGaps(int w, int h, double[] data) {
+    private final int validCountMin;
+
+    public GapFiller(int validCountMin) {
+        this.validCountMin = validCountMin;
+    }
+
+    public static double[] fillGaps1(int w, int h, double[] data, int validCountMin) {
         if (w == 1 && h == 1) {
             return data;
         }
@@ -13,54 +19,80 @@ public class GapFiller {
         if (raster.isFullOfGaps()) {
             return data;
         }
+
+        GapFiller gapFiller = new GapFiller(validCountMin);
         while (!raster.isFreeOfGaps()) {
-            raster = fillGaps(raster);
+            raster = gapFiller.fillGapsBySurroundings(raster);
         }
         return raster.data;
     }
 
-    public static double[] fillGaps2(int w, int h, double[] data) {
+    public static double[] fillGaps2(int w, int h, double[] data, int validCountMin) {
         if (w == 1 && h == 1) {
             return data;
         }
-        Raster raster = new Raster(w, h, data);
-        if (raster.isFullOfGaps()) {
-            return data;
-        }
-        while (!raster.isFreeOfGaps()) {
-            raster = fillGaps(raster);
-        }
+        GapFiller gapFiller = new GapFiller(validCountMin);
+        Raster raster = gapFiller.fillGaps2(new Raster(w, h, data));
         return raster.data;
     }
 
-    public static Raster fillGaps2(Raster raster) {
-        if (raster.isSingular()) {
-            return raster.clone();
+
+    private Raster fillGaps2(Raster raster) {
+        if (raster.isSingular() || raster.isFullOfGaps() || raster.isFreeOfGaps()) {
+            return raster;
         }
 
-        while (!raster.isFullOfGaps() && !raster.isFreeOfGaps()) {
-            raster = fillGaps(raster);
-            if (raster.isFreeOfGaps() || raster.isSingular()) {
-                return raster;
-            }
-            Raster raster2 = Resizer.aggregate(raster, (raster.w + 1) / 2, (raster.h + 1) / 2);
-
-            for (int dstY = 0; dstY < raster.h; dstY++) {
-                for (int dstX = 0; dstX < raster.w; dstX++) {
-                    int srcX = dstX / 2;
-                    int srcY = dstY / 2;
-
-                }
-            }
-
+        // Note, new raster is a copy
+        raster = fillGapsBySurroundings(raster);
+        if (raster.isFreeOfGaps()) {
+            return raster;
         }
+
+        Raster downsampled = Resizer.downsample(raster, (raster.w + 1) / 2, (raster.h + 1) / 2);
+        downsampled = fillGaps2(downsampled);
+        raster = fillGapsFromDownsampled(raster, downsampled);
+
         return raster;
     }
 
-    private static Raster fillGaps(Raster raster) {
-        //final int validCountMin = 1;
-        //final int validCountMin = 2;
-        final int validCountMin = 3;
+    /**
+     * Fills gap pixels by taking over values from a downsampled version of the raster.
+     *
+     * @param raster            The raster to gap-fill
+     * @param downsampledRaster the downsampled version.
+     * @return a new raster using  the old raster data array instance, but gap-filled
+     */
+    private Raster fillGapsFromDownsampled(Raster raster, Raster downsampledRaster) {
+        int dstW = raster.w;
+        int dstH = raster.h;
+        double[] dstData = raster.data;
+        int srcW = downsampledRaster.w;
+        int srcH = downsampledRaster.h;
+        double[] srcData = downsampledRaster.data;
+        int filledCount = 0;
+        for (int dstY = 0; dstY < dstH; dstY++) {
+            for (int dstX = 0; dstX < dstW; dstX++) {
+                if (Raster.isGap(dstData[dstY * dstW + dstX])) {
+                    int srcX = dstX / 2;
+                    int srcY = dstY / 2;
+                    double v = srcData[srcY * srcW + srcX];
+                    if (!Raster.isGap(v)) {
+                        dstData[dstY * dstW + dstX] = v;
+                        filledCount++;
+                    }
+                }
+            }
+        }
+        return new Raster(dstW, dstH, dstData.clone(), raster.gapCount - filledCount);
+    }
+
+    /**
+     * Fills gap pixels by averaging the surrounding pixels, if any.
+     *
+     * @param raster source raster
+     * @return gap-filled raster, always uses a new array instance
+     */
+    private Raster fillGapsBySurroundings(Raster raster) {
         int w = raster.w;
         int h = raster.h;
         double[] data = raster.data;
