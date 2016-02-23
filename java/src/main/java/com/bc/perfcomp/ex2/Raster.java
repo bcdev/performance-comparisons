@@ -13,6 +13,9 @@ final class Raster implements Cloneable {
     }
 
     public Raster(int w, int h, double[] data, int gapCount) {
+        if (w <= 0 || h <= 0 || data.length != w * h || gapCount < 0) {
+            throw new IllegalArgumentException();
+        }
         this.w = w;
         this.h = h;
         this.data = data;

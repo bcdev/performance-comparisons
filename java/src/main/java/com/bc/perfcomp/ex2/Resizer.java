@@ -56,6 +56,7 @@ public class Resizer {
         double sx = (srcW - 1.0) / (dstW > 1 ? (dstW - 1.0) : 1.0);
         double sy = (srcH - 1.0) / (dstH > 1 ? (dstH - 1.0) : 1.0);
         double[] interpolated = new double[dstW * dstH];
+        double[] data = raster.data;
         int gapCount = 0;
         for (int dstY = 0; dstY < dstH; dstY++) {
             double srcYF = sy * dstY;
@@ -67,10 +68,10 @@ public class Resizer {
                 int srcX = (int) srcXF;
                 double wx = srcXF - srcX;
                 boolean withinSrcW = srcX + 1 < srcW;
-                double v00 = raster.data[srcY * srcW + srcX];
-                double v01 = withinSrcW ? raster.data[srcY * srcW + srcX + 1] : v00;
-                double v10 = withinSrcH ? raster.data[(srcY + 1) * srcW + srcX] : v00;
-                double v11 = withinSrcW && withinSrcH ? raster.data[(srcY + 1) * srcW + srcX + 1] : v00;
+                double v00 = data[srcY * srcW + srcX];
+                double v01 = withinSrcW ? data[srcY * srcW + srcX + 1] : v00;
+                double v10 = withinSrcH ? data[(srcY + 1) * srcW + srcX] : v00;
+                double v11 = withinSrcW && withinSrcH ? data[(srcY + 1) * srcW + srcX + 1] : v00;
                 double v0 = v00 + wx * (v01 - v00);
                 double v1 = v10 + wx * (v11 - v10);
                 double v = v0 + wy * (v1 - v0);
@@ -105,6 +106,7 @@ public class Resizer {
         double sx = srcW / (double) dstW;
         double sy = srcH / (double) dstH;
         double[] aggregated = new double[dstW * dstH];
+        double[] data = raster.data;
         int gapCount = 0;
         for (int dstY = 0; dstY < dstH; dstY++) {
             double srcYF0 = sy * dstY;
@@ -138,7 +140,7 @@ public class Resizer {
                     double wy = srcY == srcY0 ? wy0 : srcY == srcY1 ? wy1 : 1;
                     for (int srcX = srcX0; srcX <= srcX1; srcX++) {
                         double wx = srcX == srcX0 ? wx0 : srcX == srcX1 ? wx1 : 1;
-                        double v = raster.data[srcY * srcW + srcX];
+                        double v = data[srcY * srcW + srcX];
                         if (!Raster.isGap(v)) {
                             double w = wx * wy;
                             vSum += w * v;

@@ -22,6 +22,30 @@ public class ResizerTest {
     @Test
     public void testInterpolation() throws Exception {
         assertArrayEquals(new double[]{
+                                  1, 1.5, 2, 2.5, 3,
+                          },
+                          Resizer.resize(3, 1, new double[]{
+                                  1, 2, 3,
+                          }, 5, 1),
+                          1e-8);
+
+        assertArrayEquals(new double[]{
+                                  1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3,
+                          },
+                          Resizer.resize(3, 1, new double[]{
+                                  1, 2, 3,
+                          }, 9, 1),
+                          1e-8);
+
+        assertArrayEquals(new double[]{
+                                  1, 1.6, 2.2, 2.8, 3.4, 4,
+                          },
+                          Resizer.resize(4, 1, new double[]{
+                                  1, 2, 3, 4
+                          }, 6, 1),
+                          1e-8);
+
+        assertArrayEquals(new double[]{
                         3. / 3, 4. / 3, 5. / 3, 6. / 3,
                         5. / 3, 6. / 3, 7. / 3, 8. / 3,
                         7. / 3, 8. / 3, 9. / 3, 10. / 3,

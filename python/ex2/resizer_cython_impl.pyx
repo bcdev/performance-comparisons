@@ -1,3 +1,6 @@
+#!python
+#cython: language_level=3, boundscheck=False, cdivision=True
+
 # http://stackoverflow.com/questions/7075082/what-is-future-in-python-used-for-and-how-when-to-use-it-and-how-it-works
 from __future__ import division
 from ex2.raster import Raster
@@ -5,6 +8,8 @@ import numpy as np
 cimport numpy as np
 from libc.math cimport sin, sqrt
 from libc.math cimport isnan, NAN
+
+import cython
 
 DTYPE_INT = np.int64
 DTYPE_DBL = np.float64
@@ -83,10 +88,11 @@ def downsample(raster, SIZE_t dstW, SIZE_t dstH):
     cdef DTYPE_DBL_t sx = srcW / dstW
     cdef DTYPE_DBL_t sy = srcH / dstH
     cdef np.ndarray[DTYPE_DBL_t, ndim=1] aggregated = np.zeros(dstW * dstH, dtype=DTYPE_DBL)
+    cdef np.ndarray[DTYPE_DBL_t, ndim=1] data = raster.data
     cdef SIZE_t gapCount = 0
-    cdef SIZE_t dstX, dstY, srcX0, srcX1, srcY0, srcY1
-    cdef DTYPE_DBL_t srcXF0, srcXF1,srcYF0,srcYF1, wx, wy
-    cdef DTYPE_DBL_t vSum, wSum, v, w
+    cdef SIZE_t dstX, dstY, srcX, srcY, srcX0, srcX1, srcY0, srcY1
+    cdef DTYPE_DBL_t srcXF0, srcXF1, srcYF0, srcYF1
+    cdef DTYPE_DBL_t wx0, wx1, wy0, wy1, wx, wy, vSum, wSum, v, w
     for dstY in range(dstH):
         srcYF0 = sy * dstY
         srcYF1 = srcYF0 + sy
@@ -115,7 +121,7 @@ def downsample(raster, SIZE_t dstW, SIZE_t dstH):
                 wy = wy0 if (srcY == srcY0) else wy1 if (srcY == srcY1) else 1.0
                 for srcX in range(srcX0, srcX1+1):
                     wx = wx0 if (srcX == srcX0) else wx1 if (srcX == srcX1) else 1.0
-                    v = raster.data[srcY * srcW + srcX]
+                    v = data[srcY * srcW + srcX]
                     if not isnan(v):
                         w = wx * wy
                         vSum += w * v
