@@ -7,7 +7,7 @@ package com.bc.perfcomp.ex2;
  */
 public class Resizer {
 
-    public final double EPS = 1e-10;
+    public static final double EPS = 1e-10;
 
     public static double[] resize(int w, int h, double[] data, int wNew, int hNew) {
         if (wNew < w && hNew < h) {
