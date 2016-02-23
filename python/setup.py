@@ -8,7 +8,7 @@ import numpy
 #   http://docs.cython.org/src/userguide/numpy_tutorial.html
 #   http://docs.cython.org/src/reference/compilation.html
 
-setup(ext_modules = cythonize("ex1/*.pyx"), include_dirs=[numpy.get_include()])
+setup(ext_modules = cythonize(["ex1/*.pyx", "ex2/*.pyx"]), include_dirs=[numpy.get_include()])
 
 '''
 >>> import numpy as np
