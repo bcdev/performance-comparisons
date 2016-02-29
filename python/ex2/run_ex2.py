@@ -5,7 +5,7 @@ import ex2.resizer_python_impl as pyimpl
 import ex2.resizer_cython_impl as cyimpl
 
 MAIN = 'from __main__ import np, pyimpl, cyimpl, a'
-times = 10
+times = 100
 N = 6
 
 print('\nUpsampling:')
