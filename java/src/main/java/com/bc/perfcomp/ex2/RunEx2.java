@@ -12,7 +12,7 @@ public class RunEx2 {
         Locale.setDefault(Locale.ENGLISH);
 
         int times = 100;
-        int N = 10;
+        int N = 7;
 
         System.out.print("\nUpsample:");
         System.out.printf("%s\t%s\n", "No", "Size", "Java");
