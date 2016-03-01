@@ -82,8 +82,8 @@ def downsample(raster, SIZE_t dstW, SIZE_t dstH):
     if dstW > srcW or dstH > srcH:
         raise ValueError("Invalid target size")
 
-    cdef DTYPE_DBL_t sx = srcW / dstW
-    cdef DTYPE_DBL_t sy = srcH / dstH
+    cdef DTYPE_DBL_t sx = <DTYPE_DBL_t>srcW / <DTYPE_DBL_t>dstW
+    cdef DTYPE_DBL_t sy = <DTYPE_DBL_t>srcH / <DTYPE_DBL_t>dstH
     cdef np.ndarray[DTYPE_DBL_t, ndim=2] aggregated = np.zeros((dstH, dstW), dtype=DTYPE_DBL)
     cdef np.ndarray[DTYPE_DBL_t, ndim=2] data = raster.data
     cdef SIZE_t gapCount = 0
@@ -114,9 +114,9 @@ def downsample(raster, SIZE_t dstW, SIZE_t dstH):
                     srcX1 -= 1
             vSum = 0.0
             wSum = 0.0
-            for srcY in range(srcY0, srcY1+1):
+            for srcY in range(srcY0, srcY1 + 1):
                 wy = wy0 if (srcY == srcY0) else wy1 if (srcY == srcY1) else 1.0
-                for srcX in range(srcX0, srcX1+1):
+                for srcX in range(srcX0, srcX1 + 1):
                     wx = wx0 if (srcX == srcX0) else wx1 if (srcX == srcX1) else 1.0
                     v = data[srcY, srcX]
                     if not isnan(v):
