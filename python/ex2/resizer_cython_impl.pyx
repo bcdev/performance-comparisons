@@ -6,10 +6,7 @@ from __future__ import division
 from ex2.raster import Raster
 import numpy as np
 cimport numpy as np
-from libc.math cimport sin, sqrt
 from libc.math cimport isnan, NAN
-
-import cython
 
 DTYPE_INT = np.int64
 DTYPE_DBL = np.float64
@@ -39,8 +36,8 @@ def upsample(raster, SIZE_t dstW, SIZE_t dstH):
 
     cdef DTYPE_DBL_t sx = (srcW - 1.0) / ((dstW - 1.0) if dstW > 1 else 1.0)
     cdef DTYPE_DBL_t sy = (srcH - 1.0) / ((dstH - 1.0) if dstH > 1 else 1.0)
-    cdef np.ndarray[DTYPE_DBL_t, ndim=1] data = raster.data;
-    cdef np.ndarray[DTYPE_DBL_t, ndim=1] interpolated = np.zeros(dstW * dstH, dtype=DTYPE_DBL)
+    cdef np.ndarray[DTYPE_DBL_t, ndim=2] data = raster.data;
+    cdef np.ndarray[DTYPE_DBL_t, ndim=2] interpolated = np.zeros((dstH, dstW), dtype=DTYPE_DBL)
     cdef SIZE_t gapCount = 0
     cdef SIZE_t dstX, dstY, srcX, srcY, withinSrcW, withinSrcH
     cdef DTYPE_DBL_t srcXF, srcYF, wx, wy
@@ -55,16 +52,16 @@ def upsample(raster, SIZE_t dstW, SIZE_t dstH):
             srcX = <SIZE_t>srcXF
             wx = srcXF - srcX
             withinSrcW = srcX + 1 < srcW
-            v00 = data[srcY * srcW + srcX]
-            v01 = data[srcY * srcW + srcX + 1] if withinSrcW else v00
-            v10 = data[(srcY + 1) * srcW + srcX] if withinSrcH  else v00
-            v11 = data[(srcY + 1) * srcW + srcX + 1] if withinSrcW and withinSrcH  else v00
+            v00 = data[srcY, srcX]
+            v01 = data[srcY, srcX + 1] if withinSrcW else v00
+            v10 = data[srcY + 1, srcX] if withinSrcH  else v00
+            v11 = data[srcY + 1, srcX + 1] if withinSrcW and withinSrcH  else v00
             v0 = v00 + wx * (v01 - v00)
             v1 = v10 + wx * (v11 - v10)
             v = v0 + wy * (v1 - v0)
             if isnan(v):
                 gapCount += 1
-            interpolated[dstY * dstW + dstX] = v
+            interpolated[dstY, dstX] = v
     return Raster(dstW, dstH, interpolated, gapCount)
 
 
@@ -87,8 +84,8 @@ def downsample(raster, SIZE_t dstW, SIZE_t dstH):
 
     cdef DTYPE_DBL_t sx = srcW / dstW
     cdef DTYPE_DBL_t sy = srcH / dstH
-    cdef np.ndarray[DTYPE_DBL_t, ndim=1] aggregated = np.zeros(dstW * dstH, dtype=DTYPE_DBL)
-    cdef np.ndarray[DTYPE_DBL_t, ndim=1] data = raster.data
+    cdef np.ndarray[DTYPE_DBL_t, ndim=2] aggregated = np.zeros((dstH, dstW), dtype=DTYPE_DBL)
+    cdef np.ndarray[DTYPE_DBL_t, ndim=2] data = raster.data
     cdef SIZE_t gapCount = 0
     cdef SIZE_t dstX, dstY, srcX, srcY, srcX0, srcX1, srcY0, srcY1
     cdef DTYPE_DBL_t srcXF0, srcXF1, srcYF0, srcYF1
@@ -121,20 +118,20 @@ def downsample(raster, SIZE_t dstW, SIZE_t dstH):
                 wy = wy0 if (srcY == srcY0) else wy1 if (srcY == srcY1) else 1.0
                 for srcX in range(srcX0, srcX1+1):
                     wx = wx0 if (srcX == srcX0) else wx1 if (srcX == srcX1) else 1.0
-                    v = data[srcY * srcW + srcX]
+                    v = data[srcY, srcX]
                     if not isnan(v):
                         w = wx * wy
                         vSum += w * v
                         wSum += w
             if isnan(vSum) or wSum < EPS:
-                aggregated[dstY * dstW + dstX] = NAN
+                aggregated[dstY, dstX] = NAN
                 gapCount += 1
             else:
-                aggregated[dstY * dstW + dstX] = vSum / wSum
+                aggregated[dstY, dstX] = vSum / wSum
     return Raster(dstW, dstH, aggregated, gapCount)
 
 
-def resize(SIZE_t w, SIZE_t h, np.ndarray[DTYPE_DBL_t, ndim=1] data, SIZE_t wNew, SIZE_t hNew):
+def resize(SIZE_t w, SIZE_t h, np.ndarray[DTYPE_DBL_t, ndim=2] data, SIZE_t wNew, SIZE_t hNew):
     """
      Performs raster resizing which may imply interpolation while upsampling or aggregation while downsampling.
      @author Norman Fomferra

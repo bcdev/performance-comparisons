@@ -1,12 +1,13 @@
 # http://stackoverflow.com/questions/7075082/what-is-future-in-python-used-for-and-how-when-to-use-it-and-how-it-works
 from __future__ import division
-from ex2.raster import Raster
-import numpy as np
-from math import sin, sqrt
 
+import numpy as np
+
+from ex2.raster import Raster
 
 EPS = 1e-10
-DTYPE_DBL  = np.float64
+DTYPE_DBL = np.float64
+
 
 def upsample(raster, dstW, dstH):
     """
@@ -27,8 +28,8 @@ def upsample(raster, dstW, dstH):
 
     sx = (srcW - 1.0) / ((dstW - 1.0) if dstW > 1 else 1.0)
     sy = (srcH - 1.0) / ((dstH - 1.0) if dstH > 1 else 1.0)
-    data = raster.data;
-    interpolated = np.zeros(dstW * dstH, dtype=DTYPE_DBL)
+    interpolated = np.zeros((dstH, dstW), dtype=DTYPE_DBL)
+    data = raster.data
     gapCount = 0
     for dstY in range(dstH):
         srcYF = sy * dstY
@@ -40,16 +41,16 @@ def upsample(raster, dstW, dstH):
             srcX = int(srcXF)
             wx = srcXF - srcX
             withinSrcW = srcX + 1 < srcW
-            v00 = data[srcY * srcW + srcX]
-            v01 = data[srcY * srcW + srcX + 1] if withinSrcW else v00
-            v10 = data[(srcY + 1) * srcW + srcX] if withinSrcH  else v00
-            v11 = data[(srcY + 1) * srcW + srcX + 1] if withinSrcW and withinSrcH  else v00
+            v00 = data[srcY, srcX]
+            v01 = data[srcY, srcX + 1] if withinSrcW else v00
+            v10 = data[srcY + 1, srcX] if withinSrcH  else v00
+            v11 = data[srcY + 1, srcX + 1] if withinSrcW and withinSrcH  else v00
             v0 = v00 + wx * (v01 - v00)
             v1 = v10 + wx * (v11 - v10)
             v = v0 + wy * (v1 - v0)
             if np.isnan(v):
                 gapCount += 1
-            interpolated[dstY * dstW + dstX] = v
+            interpolated[dstY, dstX] = v
     return Raster(dstW, dstH, interpolated, gapCount)
 
 
@@ -72,7 +73,7 @@ def downsample(raster, dstW, dstH):
 
     sx = srcW / dstW
     sy = srcH / dstH
-    aggregated = np.zeros(dstW * dstH, dtype=DTYPE_DBL)
+    aggregated = np.zeros((dstH, dstW), dtype=DTYPE_DBL)
     data = raster.data
     gapCount = 0
     for dstY in range(dstH):
@@ -99,20 +100,20 @@ def downsample(raster, dstW, dstH):
                     srcX1 -= 1
             vSum = 0.0
             wSum = 0.0
-            for srcY in range(srcY0, srcY1+1):
+            for srcY in range(srcY0, srcY1 + 1):
                 wy = wy0 if (srcY == srcY0) else wy1 if (srcY == srcY1) else 1.0
-                for srcX in range(srcX0, srcX1+1):
+                for srcX in range(srcX0, srcX1 + 1):
                     wx = wx0 if (srcX == srcX0) else wx1 if (srcX == srcX1) else 1.0
-                    v = data[srcY * srcW + srcX]
+                    v = data[srcY, srcX]
                     if not np.isnan(v):
                         w = wx * wy
                         vSum += w * v
                         wSum += w
             if np.isnan(vSum) or wSum < EPS:
-                aggregated[dstY * dstW + dstX] = np.nan
+                aggregated[dstY, dstX] = np.nan
                 gapCount += 1
             else:
-                aggregated[dstY * dstW + dstX] = vSum / wSum
+                aggregated[dstY, dstX] = vSum / wSum
     return Raster(dstW, dstH, aggregated, gapCount)
 
 
@@ -143,6 +144,3 @@ def resize(w, h, data, wNew, hNew):
         upsampled = upsample(Raster(w, h, data), wNew, hNew)
         return upsampled.data
     return data
-
-
-

@@ -148,7 +148,7 @@ public class Resizer {
                         }
                     }
                 }
-                if (Raster.isGap(vSum) || wSum == 0.0) {
+                if (Raster.isGap(vSum) || wSum < EPS) {
                     aggregated[dstY * dstW + dstX] = Double.NaN;
                     gapCount++;
                 } else {

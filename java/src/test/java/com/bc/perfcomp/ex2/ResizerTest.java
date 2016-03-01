@@ -6,6 +6,8 @@ import static java.lang.Double.NaN;
 import static org.junit.Assert.assertArrayEquals;
 
 /**
+ * Note: Always align this test with python/ex2/test_resizer.py
+ *
  * @author Norman Fomferra
  */
 public class ResizerTest {
