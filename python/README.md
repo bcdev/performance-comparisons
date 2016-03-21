@@ -14,3 +14,6 @@ Then open a console command window and type
 
     python setup.py build_ext --inplace
 
+For more information see section "Compiling with distutils" from the Cython documentation at
+
+* http://docs.cython.org/src/reference/compilation.html#compilation-reference
