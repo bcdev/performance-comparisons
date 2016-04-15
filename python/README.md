@@ -1,5 +1,12 @@
 # Python Performance Comparisons
 
+The following Python packages are required:
+* numpy
+* numba
+* numexpr
+* cython
+
+A Miniconda3 environment is recommended.
 To build the Cython code on Windows 10 first install Visual Studio Community from
 
 * https://www.visualstudio.com/products/free-developer-offers-vs.aspx
