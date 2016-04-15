@@ -4,4 +4,5 @@ SET VS100COMNTOOLS=%VS140COMNTOOLS%
 
 call "%MSVS14%\VC\vcvarsall.bat" amd64
 
-python setup.py build_ext --inplace
+call activate
+call python setup.py build_ext --inplace

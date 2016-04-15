@@ -3,25 +3,24 @@ from __future__ import division
 
 import numpy as np
 
-from ex2.raster import Raster
 
 EPS = 1e-10
 DTYPE_DBL = np.float64
 
 
-def upsample(raster, dstW, dstH):
+def upsample(data, dstW, dstH):
     """
      Performs a linear interpolation.
 
-     @param raster Source raster
+     @param data   Source raster
      @param dstW   Target raster width
      @param dstH   Target raster height
      @return Upsampled (interpolated) target raster.
     """
-    srcW = raster.w
-    srcH = raster.h
+    srcW = data.shape[-1]
+    srcH = data.shape[-2]
     if srcW == dstW and srcH == dstH:
-        return raster
+        return data
 
     if dstW < srcW or dstH < srcH:
         raise ValueError("Invalid target size")
@@ -29,8 +28,6 @@ def upsample(raster, dstW, dstH):
     sx = (srcW - 1.0) / ((dstW - 1.0) if dstW > 1 else 1.0)
     sy = (srcH - 1.0) / ((dstH - 1.0) if dstH > 1 else 1.0)
     interpolated = np.zeros((dstH, dstW), dtype=DTYPE_DBL)
-    data = raster.data
-    gapCount = 0
     for dstY in range(dstH):
         srcYF = sy * dstY
         srcY = int(srcYF)
@@ -48,25 +45,23 @@ def upsample(raster, dstW, dstH):
             v0 = v00 + wx * (v01 - v00)
             v1 = v10 + wx * (v11 - v10)
             v = v0 + wy * (v1 - v0)
-            if np.isnan(v):
-                gapCount += 1
             interpolated[dstY, dstX] = v
-    return Raster(dstW, dstH, interpolated, gapCount)
+    return interpolated
 
 
-def downsample(raster, dstW, dstH):
+def downsample(data, dstW, dstH):
     """
      * Performs an area-weighed average aggregation.
      *
-     * @param raster Source raster
+     * @param data   Source raster
      * @param dstW   Target raster width
      * @param dstH   Target raster height
      * @return Downsampled (aggregated) target raster.
     """
-    srcW = raster.w
-    srcH = raster.h
+    srcW = data.shape[-1]
+    srcH = data.shape[-2]
     if srcW == dstW and srcH == dstH:
-        return raster
+        return data
 
     if dstW > srcW or dstH > srcH:
         raise ValueError("Invalid target size")
@@ -74,8 +69,6 @@ def downsample(raster, dstW, dstH):
     sx = srcW / dstW
     sy = srcH / dstH
     aggregated = np.zeros((dstH, dstW), dtype=DTYPE_DBL)
-    data = raster.data
-    gapCount = 0
     for dstY in range(dstH):
         srcYF0 = sy * dstY
         srcYF1 = srcYF0 + sy
@@ -111,36 +104,35 @@ def downsample(raster, dstW, dstH):
                         wSum += w
             if np.isnan(vSum) or wSum < EPS:
                 aggregated[dstY, dstX] = np.nan
-                gapCount += 1
             else:
                 aggregated[dstY, dstX] = vSum / wSum
-    return Raster(dstW, dstH, aggregated, gapCount)
+    return aggregated
 
 
-def resize(w, h, data, wNew, hNew):
+def resize(data, wNew, hNew):
     """
      Performs raster resizing which may imply interpolation while upsampling or aggregation while downsampling.
      @author Norman Fomferra
     """
 
+    w = data.shape[-1]
+    h = data.shape[-2]
+
     if wNew < w and hNew < h:
-        downsampled = downsample(Raster(w, h, data), wNew, hNew)
-        return downsampled.data
+        return downsample(data, wNew, hNew)
     elif wNew < w:
-        downsampled = downsample(Raster(w, h, data), wNew, h)
+        downsampled = downsample(data, wNew, h)
         if hNew > h:
-            upsampled = upsample(downsampled, wNew, hNew)
-            return upsampled.data
+            return upsample(downsampled, wNew, hNew)
         else:
-            return downsampled.data
+            return downsampled
     elif hNew < h:
-        downsampled = downsample(Raster(w, h, data), w, hNew)
+        downsampled = downsample(data, w, hNew)
         if wNew > w:
-            upsampled = upsample(downsampled, wNew, hNew)
-            return upsampled.data
+            return upsample(downsampled, wNew, hNew)
         else:
-            return downsampled.data
+            return downsampled
     elif wNew > w or hNew > h:
-        upsampled = upsample(Raster(w, h, data), wNew, hNew)
-        return upsampled.data
+        return upsample(data, wNew, hNew)
     return data
+

@@ -1,53 +1,42 @@
-#!python
-#cython: language_level=3, boundscheck=False, cdivision=True
-
 # http://stackoverflow.com/questions/7075082/what-is-future-in-python-used-for-and-how-when-to-use-it-and-how-it-works
 from __future__ import division
+
+import numba as nb
 import numpy as np
-cimport numpy as np
-from libc.math cimport isnan, NAN
 
-DTYPE_INT = np.int64
+EPS = 1e-10
 DTYPE_DBL = np.float64
-ctypedef np.int64_t DTYPE_INT_t
-ctypedef np.float64_t DTYPE_DBL_t
-ctypedef Py_ssize_t SIZE_t
-
-cdef DTYPE_DBL_t EPS = 1e-10
 
 
-def upsample(np.ndarray[DTYPE_DBL_t, ndim=2] data, SIZE_t dstW, SIZE_t dstH):
+@nb.jit(nopython=True)
+def upsample(data, dstW, dstH):
     """
      Performs a linear interpolation.
 
-     @param raster Source raster
+     @param data   Source raster
      @param dstW   Target raster width
      @param dstH   Target raster height
      @return Upsampled (interpolated) target raster.
     """
-    cdef SIZE_t srcW = data.shape[1]
-    cdef SIZE_t srcH = data.shape[0]
+    srcW = data.shape[-1]
+    srcH = data.shape[-2]
     if srcW == dstW and srcH == dstH:
         return data
 
     if dstW < srcW or dstH < srcH:
         raise ValueError("Invalid target size")
 
-    cdef DTYPE_DBL_t sx = (srcW - 1.0) / ((dstW - 1.0) if dstW > 1 else 1.0)
-    cdef DTYPE_DBL_t sy = (srcH - 1.0) / ((dstH - 1.0) if dstH > 1 else 1.0)
-    cdef np.ndarray[DTYPE_DBL_t, ndim=2] interpolated = np.zeros((dstH, dstW), dtype=DTYPE_DBL)
-    cdef SIZE_t gapCount = 0
-    cdef SIZE_t dstX, dstY, srcX, srcY, withinSrcW, withinSrcH
-    cdef DTYPE_DBL_t srcXF, srcYF, wx, wy
-    cdef DTYPE_DBL_t v00, v01, v10, v11, v0, v1, v
+    sx = (srcW - 1.0) / ((dstW - 1.0) if dstW > 1 else 1.0)
+    sy = (srcH - 1.0) / ((dstH - 1.0) if dstH > 1 else 1.0)
+    interpolated = np.zeros((dstH, dstW), dtype=DTYPE_DBL)
     for dstY in range(dstH):
         srcYF = sy * dstY
-        srcY = <SIZE_t>srcYF
+        srcY = int(srcYF)
         wy = srcYF - srcY
         withinSrcH = srcY + 1 < srcH
         for dstX in range(dstW):
             srcXF = sx * dstX
-            srcX = <SIZE_t>srcXF
+            srcX = int(srcXF)
             wx = srcXF - srcX
             withinSrcW = srcX + 1 < srcW
             v00 = data[srcY, srcX]
@@ -61,35 +50,32 @@ def upsample(np.ndarray[DTYPE_DBL_t, ndim=2] data, SIZE_t dstW, SIZE_t dstH):
     return interpolated
 
 
-def downsample(np.ndarray[DTYPE_DBL_t, ndim=2] data, SIZE_t dstW, SIZE_t dstH):
+@nb.jit(nopython=True)
+def downsample(data, dstW, dstH):
     """
      * Performs an area-weighed average aggregation.
      *
-     * @param raster Source raster
+     * @param data   Source raster
      * @param dstW   Target raster width
      * @param dstH   Target raster height
      * @return Downsampled (aggregated) target raster.
     """
-    cdef SIZE_t srcW = data.shape[1]
-    cdef SIZE_t srcH = data.shape[0]
+    srcW = data.shape[-1]
+    srcH = data.shape[-2]
     if srcW == dstW and srcH == dstH:
         return data
 
     if dstW > srcW or dstH > srcH:
         raise ValueError("Invalid target size")
 
-    cdef DTYPE_DBL_t sx = <DTYPE_DBL_t>srcW / <DTYPE_DBL_t>dstW
-    cdef DTYPE_DBL_t sy = <DTYPE_DBL_t>srcH / <DTYPE_DBL_t>dstH
-    cdef np.ndarray[DTYPE_DBL_t, ndim=2] aggregated = np.zeros((dstH, dstW), dtype=DTYPE_DBL)
-    cdef SIZE_t gapCount = 0
-    cdef SIZE_t dstX, dstY, srcX, srcY, srcX0, srcX1, srcY0, srcY1
-    cdef DTYPE_DBL_t srcXF0, srcXF1, srcYF0, srcYF1
-    cdef DTYPE_DBL_t wx0, wx1, wy0, wy1, wx, wy, vSum, wSum, v, w
+    sx = srcW / dstW
+    sy = srcH / dstH
+    aggregated = np.zeros((dstH, dstW), dtype=DTYPE_DBL)
     for dstY in range(dstH):
         srcYF0 = sy * dstY
         srcYF1 = srcYF0 + sy
-        srcY0 = <SIZE_t>srcYF0
-        srcY1 = <SIZE_t>srcYF1
+        srcY0 = int(srcYF0)
+        srcY1 = int(srcYF1)
         wy0 = 1.0 - (srcYF0 - srcY0)
         wy1 = srcYF1 - srcY1
         if wy1 < EPS:
@@ -99,8 +85,8 @@ def downsample(np.ndarray[DTYPE_DBL_t, ndim=2] data, SIZE_t dstW, SIZE_t dstH):
         for dstX in range(dstW):
             srcXF0 = sx * dstX
             srcXF1 = srcXF0 + sx
-            srcX0 = <SIZE_t>srcXF0
-            srcX1 = <SIZE_t>srcXF1
+            srcX0 = int(srcXF0)
+            srcX1 = int(srcXF1)
             wx0 = 1.0 - (srcXF0 - srcX0)
             wx1 = srcXF1 - srcX1
             if wx1 < EPS:
@@ -114,24 +100,26 @@ def downsample(np.ndarray[DTYPE_DBL_t, ndim=2] data, SIZE_t dstW, SIZE_t dstH):
                 for srcX in range(srcX0, srcX1 + 1):
                     wx = wx0 if (srcX == srcX0) else wx1 if (srcX == srcX1) else 1.0
                     v = data[srcY, srcX]
-                    if not isnan(v):
+                    if not np.isnan(v):
                         w = wx * wy
                         vSum += w * v
                         wSum += w
-            if isnan(vSum) or wSum < EPS:
-                aggregated[dstY, dstX] = NAN
+            if np.isnan(vSum) or wSum < EPS:
+                aggregated[dstY, dstX] = np.nan
             else:
                 aggregated[dstY, dstX] = vSum / wSum
     return aggregated
 
 
-def resize(np.ndarray[DTYPE_DBL_t, ndim=2] data, SIZE_t wNew, SIZE_t hNew):
+@nb.jit(nopython=True)
+def resize(data, wNew, hNew):
     """
      Performs raster resizing which may imply interpolation while upsampling or aggregation while downsampling.
      @author Norman Fomferra
     """
-    cdef SIZE_t w = data.shape[1]
-    cdef SIZE_t h = data.shape[0]
+
+    w = data.shape[-1]
+    h = data.shape[-2]
 
     if wNew < w and hNew < h:
         return downsample(data, wNew, hNew)
@@ -150,6 +138,3 @@ def resize(np.ndarray[DTYPE_DBL_t, ndim=2] data, SIZE_t wNew, SIZE_t hNew):
     elif wNew > w or hNew > h:
         return upsample(data, wNew, hNew)
     return data
-
-
-
